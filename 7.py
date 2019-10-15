@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib
+import scipy.misc
 matplotlib.use( 'tkagg' )
 
 
@@ -86,113 +87,189 @@ def plotPDF(file_path):
 def lloydAlgorithm(image_path,nbits,iter,epsilon=0.01):
 
 	img = cv2.imread(image_path,1)
+	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+	
 	(b,g,r)=cv2.split(img)
+
+	levelsGr = randomInit(gray,nbits)
 
 	levelsR = randomInit(r,nbits)
 	levelsG = randomInit(g,nbits)
 	levelsB = randomInit(b,nbits)
 
-	print("levelsR: ", levelsR)
-	print("levelsG: ", levelsG)
-	print("levelsB: ",levelsB)
+	#print("levelsR: ", levelsR)
+	#print("levelsG: ", levelsG)
+	#print("levelsB: ",levelsB)
 
 	for i in range(0,iter):
+
+		bkGr = getBorders(levelsGr)
 
 		bkR = getBorders(levelsR)
 		bkG = getBorders(levelsG)
 		bkB = getBorders(levelsB)
 
-		print("bkR: ", bkR)
-		print("bkG: ",bkG)
-		print("bkB: ",bkB)
+		#print("bkR: ", bkR)
+		#print("bkG: ",bkG)
+		#print("bkB: ",bkB)
+
+		#print("sizeb: ", np.shape(bkR))
+
+		ykGr = reconstructValues(bkGr)
 
 		ykR = reconstructValues(bkR)
 		ykG = reconstructValues(bkG)
 		ykB = reconstructValues(bkB)
 
-		print("ykR: ",ykR)
-		print("ykG: ",ykG)
-		print("ykB: ",ykB)
+		#print("ykR: ",ykR)
+		#print("ykG: ",ykG)
+		#print("ykB: ",ykB)
+
+		#print("sizeY: ", np.shape(ykR))
+
+		xqGr = quantize(gray,bkGr,ykGr)
 
 		xqR = quantize(r,bkR,ykR)
 		xqG = quantize(g,bkG,ykG)
 		xqB = quantize(b,bkB,ykB)
 
-		epsR = getError(r,nbits)
-		epsG = getError(g,xqG,nbits)
-		epsB = getError(b,xqB,nbits)
+		#epsGr = getError(gray,xqGr)
+		#epsG = getError(g,xqG,nbits)
+		#epsB = getError(b,xqB,nbits)
 
-		if epsilon>epsR:
-			minbk = bkR
-			minyk = ykR
+		#if epsilon>epsR:
+		#minbk = bkR
+		#minyk = ykR
+		print("---------------------------\n")
+		print("ITER= ", iter)
 
 
-	image = cv2.merge((ykB,ykG,ykR))
+
+	xqGr = xqGr.astype(dtype='uint8')
+
+	print(r)
+	print("------------------\n")
+	print(xqR)
+
+	xqR = xqR.astype(dtype='uint8')
+	xqG = xqG.astype(dtype='uint8')
+	xqB = xqB.astype(dtype='uint8')
+
+
+	#print("min,max: ", (np.min(xqGr),np.max(xqGr)))
+	#print("sizeFinal: ", np.shape(xqGr))
+	#cv2.imwrite("filename.png", xqGr)
+
+	image = cv2.merge((xqB,xqG,xqR))
+
 	while(1):
-		cv2.imshow("Quantized Lloyd",image)
+		cv2.imshow("Quantized Gray Lloyd",xqGr)
+		cv2.imshow("Original Gray ", gray)
+
+		cv2.imshow("Original RGB",img)
+		cv2.imshow("Quantized RGB Lloyd", image)
+
+
 		if cv2.waitKey(1) & 0xFF == ord('q'): 
 			break
 
 	
 def randomInit(x,nbits):
 
-	q = np.power(2,nbits)
-	return np.linspace(np.min(x),np.max(x),num=q)
+	#x=np.array([x])
+	q=np.power(2,nbits)
+	#print(np.shape(x))
+	w,h = np.shape(x)
+	step = (np.max(x)-np.min(x))/q
+	tmp = np.zeros_like(x)
+	mid = np.mean(x[0:])
+	levels=np.linspace(np.min(x), np.max(x), num=q)
+
+
+
+	# for i in range (w):
+	# 	for j in range(h):
+		
+	# 		if x[i,j]<levels[0]:
+	# 			tmp[i,j]=levels[0]
+	# 		elif x[i,j]>levels[-1]:
+	# 			tmp[i,j]=levels[-1]
+	# 		else:
+	# 			idx = (np.abs(levels-x[i,j])).argmin()
+	# 			tmp[i,j]=levels[idx]
+
+	print("sizeStart: ", np.shape(levels))
+	return levels
+
+
 
 def getBorders(x):
 
-	bk = np.zeros(len(x)-1)
+	tmp = np.zeros_like(x)
 
 	for i in range(len(x)-1):
-		bk[i]=0.5*(x[i]+x[i+1])
+		#print("xi,xi+1",(x[i],x[i+1]))
+		tmp[i] = 0.5*(x[i]+x[i+1])
 
-	return bk
+
+	#for i in range(w-1):
+	#	for j in range(h-1):			
+	#		tmp[i,j]=0.5*(x[i,j]+x[i+1,j+1])
+
+	#print("sizeBK: ", np.shape(tmp))		
+	return tmp
 
 def reconstructValues(x):
 
-	xq = np.zeros(len(x)-1)
+	tmp = np.zeros_like(x)
+	#w,h = np.shape(x)
 	#hist,bins = np.histogram(x,bins=np.max(int(x))-np.min(int(x)),range=(np.min(x),np.max(x)),density=True)
-
 	for i in range(len(x)-1):
 		dx = (x[i+1]-x[i])/100
 		f = np.arange(x[i],x[i+1],dx)		
-		xq[i]=(x[i]*sum(f)*dx)/(sum(f)*dx)
+		tmp[i]=(x[i]*sum(f)*dx)/(sum(f)*dx)
 
-	return xq
+	return tmp
+
+
+	# for i in range(w-1):
+	# 	for j in range(h-1):
+	# 		if x[i+1,j+1] == x[i+1,j+1]:
+	# 			tmp[i,j]=0
+	# 		else:
+	# 			dx = (x[i+1,j+1]-x[i,j])/100
+	# 			print("dx: ",dx)
+	# 			print("pix+1: ", x[i+1,j+1])
+	# 			print("pix(i): ",x[i,j])
+	# 			f = np.arange(x[i,j],x[i+1,j+1],dx)		
+	# 			tmp[i,j]=(x[i,j]*sum(f)*dx)/(sum(f)*dx)
+
+	#print("sizeYK: ",np.shape(tmp))
+
+	return tmp
 
 
 def quantize(x,b,y):
 	
-	xq = np.zeros(np.shape(x))
-	print("sizeB: ",np.size(b))
-	print("sizeY: ",np.size(y))
+	tmp = np.zeros_like(x)
+	w,h=np.shape(x)
 	for i in range(len(b)-1):
+		logical = np.logical_and(x>b[i],x <= b[i+1])
+		#print("logi: " ,np.shape(logical))
+		comp = np.full(np.shape(tmp),int(y[i]))
+		#print("comp: ",np.shape(comp))
+		tmp = np.where(logical,comp,tmp)
+		#print("tmp: ", np.shape(tmp))
+		#print("[i,j]:", (i,j))
+	return tmp
 
-		if i==0:
 
-			xq = np.where(np.logical_and(x > b[i],x <= b[i+1]),np.full(np.size(xq),y[i]),xq)
-
-		elif i == range(len(b))[-1]-1:
-			xq = np.where(np.logical_and(x > b[i], x <= b[i+1]),np.full(np.size(xq), y[i]), xq)
-
-		else:
-			xq = np.where(np.logical_and(x > b[i], x < b[i+1]), np.full(np.size(xq), y[i]), xq)
-
-		return xq
-
-def getError(x,xq,nbits):
+def getError(x,xq):
 
 	assert np.size(x) == np.size(xq)
 
 	return np.sum(np.power(x-xq,2))/np.size(x)
-
-
-
-
-
-
-
-
 
 def main():
 
