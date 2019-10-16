@@ -153,14 +153,14 @@ def main():
 	#	option = int(input("Choose again: "))
 
 	if mode == 'v':
-		filenames= os.listdir ("./vídeos") # get all files' and folders' names in the current directory
+		filenames= os.listdir ("./videos") # get all files' and folders' names in the current directory
 		print("Videos: ", filenames)
 		open_vid = str(input("Choose the video: "))
 
 		for filename in filenames: # loop through all the files and folders
 
 		    if open_vid == filename:
-		        dir_path = str(os.path.join(os.path.abspath("./vídeos"),filename))
+		        dir_path = str(os.path.join(os.path.abspath("./videos"),filename))
 	        	break
 
 		getHistVideo(dir_path)
