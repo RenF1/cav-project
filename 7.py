@@ -84,49 +84,38 @@ def plotPDF(file_path):
 	plt.show()
 
 
-def lloydAlgorithm(image_path,nbits,iter,epsilon=0.01):
+def lloydAlgorithmImage(image_path,nbits,iter,epsilon=0.0001):
 
 	img = cv2.imread(image_path,1)
 	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 	
 	(b,g,r)=cv2.split(img)
+	q=np.power(2,nbits)
+	step = 255/q
 
-	levelsGr = randomInit(gray,nbits)
+	ykGr = randomInit(gray,nbits)
 
-	levelsR = randomInit(r,nbits)
-	levelsG = randomInit(g,nbits)
-	levelsB = randomInit(b,nbits)
+	ykR= randomInit(r,nbits)
+	ykG = randomInit(g,nbits)
+	ykB = randomInit(b,nbits)
 
-	#print("levelsR: ", levelsR)
-	#print("levelsG: ", levelsG)
-	#print("levelsB: ",levelsB)
+	epsR=epsGr=epsG=epsB=epsilon
 
 	for i in range(0,iter):
 
-		bkGr = getBorders(levelsGr)
+		bkGr = getBorders(ykGr)
 
-		bkR = getBorders(levelsR)
-		bkG = getBorders(levelsG)
-		bkB = getBorders(levelsB)
+		bkR = getBorders(ykR)
+		bkG = getBorders(ykG)
+		bkB = getBorders(ykB)
 
-		#print("bkR: ", bkR)
-		#print("bkG: ",bkG)
-		#print("bkB: ",bkB)
 
-		#print("sizeb: ", np.shape(bkR))
+		ykGr = reconstructValues(bkGr,gray,step)
+		ykR = reconstructValues(bkR,r,step)
+		ykG = reconstructValues(bkG,g,step)
+		ykB = reconstructValues(bkB,b,step)
 
-		ykGr = reconstructValues(bkGr)
-
-		ykR = reconstructValues(bkR)
-		ykG = reconstructValues(bkG)
-		ykB = reconstructValues(bkB)
-
-		#print("ykR: ",ykR)
-		#print("ykG: ",ykG)
-		#print("ykB: ",ykB)
-
-		#print("sizeY: ", np.shape(ykR))
 
 		xqGr = quantize(gray,bkGr,ykGr)
 
@@ -134,36 +123,37 @@ def lloydAlgorithm(image_path,nbits,iter,epsilon=0.01):
 		xqG = quantize(g,bkG,ykG)
 		xqB = quantize(b,bkB,ykB)
 
-		#epsGr = getError(gray,xqGr)
-		#epsG = getError(g,xqG,nbits)
-		#epsB = getError(b,xqB,nbits)
+		epsGr = getError(gray,xqGr)
 
-		#if epsilon>epsR:
-		#minbk = bkR
-		#minyk = ykR
+		epsR = getError(r,xqR)
+		epsG = getError(g,xqG)
+		epsB = getError(b,xqB)
+
+		print("ErrR: ",epsGr)
+
+		if epsilon>epsGr:
+			minbk = bkGr
+			minyk = bkGr
+			break
 		print("---------------------------\n")
-		print("ITER= ", iter)
+		print("iter: ",i)
 
 
 
 	xqGr = xqGr.astype(dtype='uint8')
-
-	print(r)
-	print("------------------\n")
-	print(xqR)
 
 	xqR = xqR.astype(dtype='uint8')
 	xqG = xqG.astype(dtype='uint8')
 	xqB = xqB.astype(dtype='uint8')
 
 
-	#print("min,max: ", (np.min(xqGr),np.max(xqGr)))
-	#print("sizeFinal: ", np.shape(xqGr))
-	#cv2.imwrite("filename.png", xqGr)
-
 	image = cv2.merge((xqB,xqG,xqR))
-
+	path1 = os.getcwd()+'/output/rgb'+str(nbits)+'b.png'
+	path2 = os.getcwd()+'/output/gray'+str(nbits)+'b.png'
+	cv2.imwrite(path1,image)
+	cv2.imwrite(path2,xqGr)
 	while(1):
+
 		cv2.imshow("Quantized Gray Lloyd",xqGr)
 		cv2.imshow("Original Gray ", gray)
 
@@ -171,82 +161,174 @@ def lloydAlgorithm(image_path,nbits,iter,epsilon=0.01):
 		cv2.imshow("Quantized RGB Lloyd", image)
 
 
+
 		if cv2.waitKey(1) & 0xFF == ord('q'): 
 			break
+
+
+def lloydAlgorithmVideo(file_path,nbits,iter,epsilon=0.0001):
+
+	cap = cv2.VideoCapture(file_path)
+
+	q=np.power(2,nbits)
+	step = 255/q
+
+	# Check if camera opened successfully 
+	if (cap.isOpened()== False):  
+		print("Error opening video file") 
+
+	flag=True
+	while (1):
+		# Capture frame-by-frame 
+		ret, frame = cap.read()
+		
+		if ret == True:
+
+			height , width , layers = frame.shape
+			new_h=height*3
+			new_w=width*3
+			frame= cv2.resize(frame, (new_w, new_h))
+
+			if flag == True:
+				size = (int(frame.shape[1]), int(frame.shape[0]))				
+				path1 = os.getcwd()+'/output/rgb_video'+str(nbits)+'b.avi'
+				path2 = os.getcwd()+'/output/gray'+str(nbits)+'b.avi'
+				writerRGB = cv2.VideoWriter(path1, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 30, size, True)
+				#writerGr = cv2.VideoWriter(path2, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 30, size, True)
+				flag=False
+
+
+			(b,g,r)=cv2.split(frame)
+			
+			gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+			
+			#ykGr = randomInit(gray,nbits)
+
+			ykR= randomInit(r,nbits)
+			ykG = randomInit(g,nbits)
+			ykB = randomInit(b,nbits)
+
+			for i in range(0,iter):
+
+				#bkGr = getBorders(ykGr)
+
+				bkR = getBorders(ykR)
+				bkG = getBorders(ykG)
+				bkB = getBorders(ykB)
+
+
+				#ykGr = reconstructValues(bkGr,gray,step)
+				ykR = reconstructValues(bkR,r,step)
+				ykG = reconstructValues(bkG,g,step)
+				ykB = reconstructValues(bkB,b,step)
+
+
+				#xqGr = quantize(gray,bkGr,ykGr)
+
+				xqR = quantize(r,bkR,ykR)
+				xqG = quantize(g,bkG,ykG)
+				xqB = quantize(b,bkB,ykB)
+
+				#epsGr = getError(gray,xqGr)
+
+				epsR = getError(r,xqR)
+				epsG = getError(g,xqG)
+				epsB = getError(b,xqB)
+
+				if epsilon>epsR:
+					minbkR = bkR
+					minykR = ykR
+				
+				elif epsilon>epsG:
+					minbkG = bkG
+					minykG = ykG
+				
+				elif epsilon>epsB:
+					minbkB = bkB
+					minykB = ykB
+				
+				print("---------------------------\n")
+				#print("iter: ",i) 
+
+			#xqGr = xqGr.astype(dtype='uint8')
+
+			xqR = xqR.astype(dtype='uint8')
+			xqG = xqG.astype(dtype='uint8')
+			xqB = xqB.astype(dtype='uint8')
+
+			image = cv2.merge((xqB,xqG,xqR))
+			#xqGr = cv2.cvtColor(xqGr, cv2.COLOR_GRAY2BGR)
+
+			writerRGB.write(image)
+			#writerGr.write(xqGr)
+			
+			# Press Q on keyboard to  exit 
+			if cv2.waitKey(1) & 0xFF == ord('q'): 
+				break
+
+		else:
+			print("Video ended")
+			break
+
+	cap.release()
+	writerRGB.release()
+	#writerGr.release()
+	cv2.destroyAllWindows()
 
 	
 def randomInit(x,nbits):
 
-	#x=np.array([x])
+	
 	q=np.power(2,nbits)
-	#print(np.shape(x))
-	w,h = np.shape(x)
 	step = (np.max(x)-np.min(x))/q
 	tmp = np.zeros_like(x)
-	mid = np.mean(x[0:])
 	levels=np.linspace(np.min(x), np.max(x), num=q)
+	middle_point = np.mean(x)
 
+	var1 = np.arange(0,middle_point,step)
+	
+	var2 = np.arange(middle_point,255,step)
+	
+	if middle_point<127:
+		var2 = np.delete(var2,-1)
 
+	else:
+		var1 = np.delete(var1,0)
 
-	# for i in range (w):
-	# 	for j in range(h):
-		
-	# 		if x[i,j]<levels[0]:
-	# 			tmp[i,j]=levels[0]
-	# 		elif x[i,j]>levels[-1]:
-	# 			tmp[i,j]=levels[-1]
-	# 		else:
-	# 			idx = (np.abs(levels-x[i,j])).argmin()
-	# 			tmp[i,j]=levels[idx]
+	tmp = np.concatenate((var1,var2),axis=None)
+	
+	assert np.size(tmp) == q
 
-	print("sizeStart: ", np.shape(levels))
-	return levels
+	return tmp
 
 
 
 def getBorders(x):
 
-	tmp = np.zeros_like(x)
+	tmp = np.zeros(np.size(x)-1)
 
 	for i in range(len(x)-1):
-		#print("xi,xi+1",(x[i],x[i+1]))
+		
 		tmp[i] = 0.5*(x[i]+x[i+1])
 
-
-	#for i in range(w-1):
-	#	for j in range(h-1):			
-	#		tmp[i,j]=0.5*(x[i,j]+x[i+1,j+1])
-
-	#print("sizeBK: ", np.shape(tmp))		
 	return tmp
 
-def reconstructValues(x):
+def reconstructValues(x,channel,step):
 
-	tmp = np.zeros_like(x)
-	#w,h = np.shape(x)
-	#hist,bins = np.histogram(x,bins=np.max(int(x))-np.min(int(x)),range=(np.min(x),np.max(x)),density=True)
+	tmp= np.zeros(np.size(x)-1)
+
 	for i in range(len(x)-1):
-		dx = (x[i+1]-x[i])/100
-		f = np.arange(x[i],x[i+1],dx)		
-		tmp[i]=(x[i]*sum(f)*dx)/(sum(f)*dx)
+		if (np.abs(x[i+1]-x[i]) <=1 ):
 
-	return tmp
-
-
-	# for i in range(w-1):
-	# 	for j in range(h-1):
-	# 		if x[i+1,j+1] == x[i+1,j+1]:
-	# 			tmp[i,j]=0
-	# 		else:
-	# 			dx = (x[i+1,j+1]-x[i,j])/100
-	# 			print("dx: ",dx)
-	# 			print("pix+1: ", x[i+1,j+1])
-	# 			print("pix(i): ",x[i,j])
-	# 			f = np.arange(x[i,j],x[i+1,j+1],dx)		
-	# 			tmp[i,j]=(x[i,j]*sum(f)*dx)/(sum(f)*dx)
-
-	#print("sizeYK: ",np.shape(tmp))
-
+			continue
+		else:
+			centroid = getExpected(x[i],x[i+1],channel)
+			var = x[i+1]
+			tmp[i] = centroid
+	tmp = np.insert(tmp,0,0)
+	tmp = np.append(tmp,var+step)
+	tmp = np.sort(tmp,axis=None)
+	
 	return tmp
 
 
@@ -256,12 +338,11 @@ def quantize(x,b,y):
 	w,h=np.shape(x)
 	for i in range(len(b)-1):
 		logical = np.logical_and(x>b[i],x <= b[i+1])
-		#print("logi: " ,np.shape(logical))
-		comp = np.full(np.shape(tmp),int(y[i]))
-		#print("comp: ",np.shape(comp))
+		
+		comp = np.full(np.shape(tmp),y[i])
+
 		tmp = np.where(logical,comp,tmp)
-		#print("tmp: ", np.shape(tmp))
-		#print("[i,j]:", (i,j))
+
 	return tmp
 
 
@@ -271,31 +352,61 @@ def getError(x,xq):
 
 	return np.sum(np.power(x-xq,2))/np.size(x)
 
+def getExpected(b1,b2,channel):
+
+	expected = np.array([])
+	den = np.array([])
+
+	prob,vals=probability(channel)
+
+	idx = np.rint(b1)
+	idx2 = np.rint(b2)
+
+	mask = ~np.any([(idx >= vals), (idx2 <= vals)], axis=0)
+
+	for i in range (len(prob)-1):
+		if mask[i]==True:
+			expected=np.append(expected,prob[i]*vals[i])
+			den = np.append(den,prob[i])
+
+	expected=sum(expected)
+	den = sum (den)
+
+	if den is not 0:
+		centroid = expected/den
+	else:
+		return (idx2-idx)*0.5
+	
+	return centroid
+
+
+def probability(samples):
+
+	numPixels = np.prod(samples.shape[:2])
+	val, cnts = np.unique(samples, return_counts = True)
+	prob = cnts/numPixels
+	return prob,val		
+
+
 def main():
 
 
 	mode = sys.argv[1]
 	nbits=int(sys.argv[2])
 	iterations=int(sys.argv[3])
-	#mode = i/v (image or video)
-
-
-	#while mode!= 'i' or mode!= 'v':
-	#	print("Press i or v")
-	#	option = int(input("Choose again: "))
-
+	
 	if mode == 'v':
-		filenames= os.listdir ("./vídeos") # get all files' and folders' names in the current directory
+		filenames= os.listdir ("./videos") # get all files' and folders' names in the current directory
 		print("Videos: ", filenames)
 		open_vid = str(input("Choose the video: "))
 
 		for filename in filenames: # loop through all the files and folders
 
 		    if open_vid == filename:
-		        dir_path = str(os.path.join(os.path.abspath("./vídeos"),filename))
+		        dir_path = str(os.path.join(os.path.abspath("./videos"),filename))
 	        	break
 
-		getHistVideo(dir_path)
+		lloydAlgorithmVideo(dir_path,nbits,iterations)
 
 	elif mode == 'i':
 
@@ -309,8 +420,8 @@ def main():
 		        dir_path = str(os.path.join(os.path.abspath("./img_dataset"),filename))
 	        	break
 
-		#plotPDF(dir_path)
-		lloydAlgorithm(dir_path,nbits,iterations)
+		plotPDF(dir_path)
+		lloydAlgorithmImage(dir_path,nbits,iterations)
 
 
 if __name__ == "__main__":
