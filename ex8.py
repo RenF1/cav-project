@@ -4,7 +4,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
-import statistics
+#import statistics
 matplotlib.use( 'tkagg' )
 
 
@@ -101,7 +101,7 @@ def main():
 	mono, xq = quantize(dir_path,nbits)
 
 	snr = snr_calc(mono, xq)
-	print("Media: ", statistics.mean(mono))
+	print("Media: ", np.mean(mono))
 	print("Variancia: ", snr) 
 	print("thats all")
 
