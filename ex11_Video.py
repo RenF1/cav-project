@@ -4,32 +4,53 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+import cv2
 #import statistics
 matplotlib.use( 'tkagg' )
 
 def get_samples(dirpath):
-    wavefile = wave.open(dirpath, 'rb')
 
-    nchannels, sampwidth, framerate, nframes, comptype, compname = wavefile.getparams()
-    print("nChannels: ", nchannels)
-    print("Sampwidth: ", sampwidth)
-    print("FrameRate: ", framerate)
-    print("nFrames: ", nframes)
-    print("CompType: ", comptype)
-    print("CompName: ", compname)
+    samples=np.array([])
+    filenames= os.listdir ("./videos") # get all files' and folders' names in the current directory
+    print("Videos: ", filenames)
+    #open_vid = str(input("Choose the video: "))
+    open_vid = "football_qcif_15fps.y4m"
 
-    fmt = "<"+'h'*nchannels
-    left = []
-    right = []
+    for filename in filenames: # loop through all the files and folders
 
-    while wavefile.tell() < nframes:
-        dec = struct.unpack(fmt, wavefile.readframes(1))
-        left.append(dec[0])
-        right.append(dec[1])
-    
-    wavefile.close()
-    
-    return left, right
+        if open_vid == filename:
+            dir_path = str(os.path.join(os.path.abspath("./videos"),filename))
+            break
+
+
+    # Create a VideoCapture object and read from input file 
+    cap = cv2.VideoCapture(dir_path) 
+       
+    # Check if camera opened successfully 
+    if (cap.isOpened()== False):  
+      print("Error opening video file") 
+       
+    # Read until video is completed 
+    while(cap.isOpened()): 
+          
+        # Capture frame-by-frame 
+        ret, frame = cap.read()
+
+        if ret == True:
+            # Display the resulting frame 
+            samples=np.concatenate((samples,frame.flatten()),axis=None)
+
+            # Press Q on keyboard to  exit 
+            if cv2.waitKey(33) & 0xFF == ord('q'): 
+                break
+           
+        # Break the loop 
+        else:  
+            break
+
+    cap.release()
+
+    return samples
 
 def twos_comp(val, bits):
     """compute the 2's complement of int value val"""
@@ -50,8 +71,9 @@ def probability(samples):
         print("Progress: "),
         print("{:.1f}".format(percentage)),
         print("%")
-        nbin_2c=twos_comp(samples[x], 15);
+        nbin_2c=twos_comp(int(samples[x]), 7)
         sbin='{:016b}'.format(nbin_2c)
+
         for y in range(len(sbin)):
             if y==0:
                 comp=0
@@ -83,41 +105,35 @@ def probability(samples):
                 comp=1
         first=0
 
-    print(count00)
-    print(count01)
-    print(count10)
-    print(count11)
     prob=[count00/(16*len(samples)), count01/(16*len(samples)), count10/(16*len(samples)), count11/(16*len(samples))]
-    print(prob[0])
-    print(prob[1])
-    print(prob[2])
-    print(prob[3])
 
     return prob
 
 def entropy(prob):
+
     PS0=prob[1]/(prob[1]+prob[2])
     PS1=prob[2]/(prob[1]+prob[2])
     HS1=-prob[1]*(math.log(prob[1],2))-prob[3]*(math.log(prob[3],2))
     HS0=-prob[2]*(math.log(prob[2],2))-prob[0]*(math.log(prob[0],2))
     H=PS0*HS0+PS1*HS1
     print(" ")
-    print("Entropy: "),
+    print("Entropy: ")
     print(H)
 
 def main():
     audfile = sys.argv[1]
 
-    files = os.listdir("./WAVfiles")
+    files = os.listdir("./videos")
     print("Files: ", files)
     for filename in files: # loop through all the files and folders
 
 	    if audfile == filename:
-	        dir_path = str(os.path.join(os.path.abspath("./WAVfiles"),filename))
+	        dir_path = str(os.path.join(os.path.abspath("./videos"),filename))
         	break
     
     print("Ficheiro a ser lido: ", dir_path)
-    left, right = get_samples(dir_path)
+    #left, right = get_samples(dir_path)
+    left=get_samples(dir_path)
     prob_l = probability(left)
     entropy(prob_l)
     #prob_r = probability(right)

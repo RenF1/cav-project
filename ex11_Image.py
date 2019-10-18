@@ -4,32 +4,17 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+import cv2
 #import statistics
 matplotlib.use( 'tkagg' )
 
 def get_samples(dirpath):
-    wavefile = wave.open(dirpath, 'rb')
 
-    nchannels, sampwidth, framerate, nframes, comptype, compname = wavefile.getparams()
-    print("nChannels: ", nchannels)
-    print("Sampwidth: ", sampwidth)
-    print("FrameRate: ", framerate)
-    print("nFrames: ", nframes)
-    print("CompType: ", comptype)
-    print("CompName: ", compname)
+    img = cv2.imread(dirpath,1)
+    samples = img.flatten()
+    print(np.shape(samples))
 
-    fmt = "<"+'h'*nchannels
-    left = []
-    right = []
-
-    while wavefile.tell() < nframes:
-        dec = struct.unpack(fmt, wavefile.readframes(1))
-        left.append(dec[0])
-        right.append(dec[1])
-    
-    wavefile.close()
-    
-    return left, right
+    return samples
 
 def twos_comp(val, bits):
     """compute the 2's complement of int value val"""
@@ -50,7 +35,7 @@ def probability(samples):
         print("Progress: "),
         print("{:.1f}".format(percentage)),
         print("%")
-        nbin_2c=twos_comp(samples[x], 15);
+        nbin_2c=twos_comp(samples[x], 7)
         sbin='{:016b}'.format(nbin_2c)
         for y in range(len(sbin)):
             if y==0:
@@ -83,16 +68,7 @@ def probability(samples):
                 comp=1
         first=0
 
-    print(count00)
-    print(count01)
-    print(count10)
-    print(count11)
     prob=[count00/(16*len(samples)), count01/(16*len(samples)), count10/(16*len(samples)), count11/(16*len(samples))]
-    print(prob[0])
-    print(prob[1])
-    print(prob[2])
-    print(prob[3])
-
     return prob
 
 def entropy(prob):
@@ -108,16 +84,17 @@ def entropy(prob):
 def main():
     audfile = sys.argv[1]
 
-    files = os.listdir("./WAVfiles")
+    files = os.listdir("./img_dataset")
     print("Files: ", files)
     for filename in files: # loop through all the files and folders
 
 	    if audfile == filename:
-	        dir_path = str(os.path.join(os.path.abspath("./WAVfiles"),filename))
+	        dir_path = str(os.path.join(os.path.abspath("./img_dataset"),filename))
         	break
     
     print("Ficheiro a ser lido: ", dir_path)
-    left, right = get_samples(dir_path)
+    #left, right = get_samples(dir_path)
+    left=get_samples(dir_path)
     prob_l = probability(left)
     entropy(prob_l)
     #prob_r = probability(right)
