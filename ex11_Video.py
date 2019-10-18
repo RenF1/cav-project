@@ -61,6 +61,8 @@ def twos_comp(val, bits):
 def probability(samples):
     print("start")
     first=1
+    count0=0.0
+    count1=0.0
     count00=0.0
     count01=0.0
     count10=0.0
@@ -81,6 +83,10 @@ def probability(samples):
                 if y==comp and first==0:
                     bd1=bd2
                     bd2=sbin[y]
+                    if bd1=='0':
+                        count0+=1
+                    else:
+                        count1+=1    
                     if bd1=='0'and bd2=='0': 
                         count00+=1
                     if bd1=='0'and bd2=='1': 
@@ -93,6 +99,10 @@ def probability(samples):
                 if y<len(sbin)-1:
                     bd1=sbin[y] #binary digit 1
                     bd2=sbin[y+1] #binary digit 2
+                    if bd1=='0':
+                        count0+=1
+                    else:
+                        count1+=1    
                     if bd1=='0'and bd2=='0': 
                         count00+=1
                     if bd1=='0'and bd2=='1': 
@@ -105,9 +115,17 @@ def probability(samples):
                 comp=1
         first=0
 
-    prob=[count00/(16*len(samples)), count01/(16*len(samples)), count10/(16*len(samples)), count11/(16*len(samples))]
-
-    return prob
+    prob=[count00/(16*len(samples)), count01/(16*len(samples)), count10/(16*len(samples)), count11/(16*len(samples)), count0/(16*len(samples)), count1/(16*len(samples))]
+    P0_0=prob[0]/prob[4] #conditional probabilities
+    P0_1=prob[2]/prob[5]
+    P1_0=prob[1]/prob[4]
+    P1_1=prob[3]/prob[5]
+    probs_cond=[P0_0,P0_1,P1_0,P1_1]
+    #print(P0_0)
+    #print(P0_1)
+    #print(P1_0)
+    #print(P1_1)
+    return probs_cond
 
 def entropy(prob):
 
@@ -117,8 +135,9 @@ def entropy(prob):
     HS0=-prob[2]*(math.log(prob[2],2))-prob[0]*(math.log(prob[0],2))
     H=PS0*HS0+PS1*HS1
     print(" ")
-    print("Entropy: ")
-    print(H)
+    print("     Entropy: "),
+    print(H),
+    print("bits")
 
 def main():
     audfile = sys.argv[1]
@@ -132,14 +151,9 @@ def main():
         	break
     
     print("Ficheiro a ser lido: ", dir_path)
-    #left, right = get_samples(dir_path)
-    left=get_samples(dir_path)
-    prob_l = probability(left)
-    entropy(prob_l)
-    #prob_r = probability(right)
-    #entropy(prob_r)
-
-    
+    smps=get_samples(dir_path)
+    prob = probability(smps)
+    entropy(prob)
 
 if __name__ == "__main__":
     main()

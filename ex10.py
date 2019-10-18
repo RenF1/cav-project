@@ -37,9 +37,11 @@ def twos_comp(val, bits):
         val = val - (1 << bits)        # compute negative value
     return val                         # return positive value as is
 
-def probability(samples):
+def probability(samples, side):
     print("start")
     first=1
+    count0=0.0
+    count1=0.0
     count00=0.0
     count01=0.0
     count10=0.0
@@ -47,7 +49,9 @@ def probability(samples):
     comp=0
     for x in range(len(samples)):
         percentage=(float(x)/len(samples))*100
-        print("Progress: "),
+        print("Progress"),
+        print(side),
+        print("side:"),
         print("{:.1f}".format(percentage)),
         print("%")
         nbin_2c=twos_comp(samples[x], 15);
@@ -59,6 +63,10 @@ def probability(samples):
                 if y==comp and first==0:
                     bd1=bd2
                     bd2=sbin[y]
+                    if bd1=='0':
+                        count0+=1
+                    else:
+                        count1+=1    
                     if bd1=='0'and bd2=='0': 
                         count00+=1
                     if bd1=='0'and bd2=='1': 
@@ -71,6 +79,10 @@ def probability(samples):
                 if y<len(sbin)-1:
                     bd1=sbin[y] #binary digit 1
                     bd2=sbin[y+1] #binary digit 2
+                    if bd1=='0':
+                        count0+=1
+                    else:
+                        count1+=1    
                     if bd1=='0'and bd2=='0': 
                         count00+=1
                     if bd1=='0'and bd2=='1': 
@@ -78,22 +90,21 @@ def probability(samples):
                     if bd1=='1'and bd2=='0': 
                         count10+=1
                     if bd1=='1'and bd2=='1': 
-                        count11+=1
+                        count11+=1        
             else:
                 comp=1
         first=0
-
-    print(count00)
-    print(count01)
-    print(count10)
-    print(count11)
-    prob=[count00/(16*len(samples)), count01/(16*len(samples)), count10/(16*len(samples)), count11/(16*len(samples))]
-    print(prob[0])
-    print(prob[1])
-    print(prob[2])
-    print(prob[3])
-
-    return prob
+    prob=[count00/(16*len(samples)), count01/(16*len(samples)), count10/(16*len(samples)), count11/(16*len(samples)), count0/(16*len(samples)), count1/(16*len(samples))]
+    P0_0=prob[0]/prob[4] #conditional probabilities
+    P0_1=prob[2]/prob[5]
+    P1_0=prob[1]/prob[4]
+    P1_1=prob[3]/prob[5]
+    probs_cond=[P0_0,P0_1,P1_0,P1_1]
+    #print(P0_0)
+    #print(P0_1)
+    #print(P1_0)
+    #print(P1_1)
+    return probs_cond
 
 def entropy(prob):
     PS0=prob[1]/(prob[1]+prob[2])
@@ -101,9 +112,9 @@ def entropy(prob):
     HS1=-prob[1]*(math.log(prob[1],2))-prob[3]*(math.log(prob[3],2))
     HS0=-prob[2]*(math.log(prob[2],2))-prob[0]*(math.log(prob[0],2))
     H=PS0*HS0+PS1*HS1
-    print(" ")
-    print("Entropy: "),
-    print(H)
+    print("     Entropy: "),
+    print(H),
+    print("bits")
 
 def main():
     audfile = sys.argv[1]
@@ -118,12 +129,14 @@ def main():
     
     print("Ficheiro a ser lido: ", dir_path)
     left, right = get_samples(dir_path)
-    prob_l = probability(left)
+    prob_l = probability(left, "left")
+    prob_r = probability(right, "right")
+    print(" ")
+    print("Left Channel:")
     entropy(prob_l)
-    #prob_r = probability(right)
-    #entropy(prob_r)
-
-    
+    print(" ")
+    print("Right Channel:")
+    entropy(prob_r)
 
 if __name__ == "__main__":
     main()
