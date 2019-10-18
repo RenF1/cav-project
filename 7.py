@@ -1,12 +1,10 @@
 import wave, struct
-from scipy.stats import norm
 import os,sys
 import math
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib
-import scipy.misc
 matplotlib.use( 'tkagg' )
 
 
@@ -129,13 +127,13 @@ def lloydAlgorithmImage(image_path,nbits,iter,epsilon=0.0001):
 		epsG = getError(g,xqG)
 		epsB = getError(b,xqB)
 
-		print("ErrR: ",epsGr)
+		#print("ErrR: ",epsGr)
 
 		if epsilon>epsGr:
 			minbk = bkGr
 			minyk = bkGr
 			break
-		print("---------------------------\n")
+		#print("---------------------------\n")
 		print("iter: ",i)
 
 
