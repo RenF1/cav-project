@@ -50,7 +50,7 @@ def read_vid(org, quant):
 
 		if ret1 == 1 and ret2 == 1:
 			sb, sg, sr = split_n_calc(frame1, frame2)
-			print("BLUE, GREEN, RED", sb, sg, sr)
+			#print("BLUE, GREEN, RED", sb, sg, sr)
 			snrb.append(sb)
 			snrg.append(sg)
 			snrr.append(sr)
